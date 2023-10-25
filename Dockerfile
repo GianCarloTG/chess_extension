@@ -150,7 +150,7 @@ RUN set -eux; \
 # https://git.alpinelinux.org/aports/commit/testing/nss_wrapper/APKBUILD?h=3.17-stable&id=94d81ceeb58cff448d489bbcbe9a6d40c9991663
 		$([ "$(apk --print-arch)" != 'ppc64le' ] && echo 'nss_wrapper') \
 	; \
-	apk del --no-network .build-deps; \
+	#apk del --no-network .build-deps; \
 	cd /; \
 	rm -rf \
 		/usr/src/postgresql \
