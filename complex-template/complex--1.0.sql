@@ -230,3 +230,29 @@ CREATE OPERATOR <-> (
 );
 
 /******************************************************************************/
+
+CREATE FUNCTION complex_mod_eq(complex, complex)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'complex_mod_eq'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION complex_mod_lt(complex, complex)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'complex_mod_lt'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION complex_mod_le(complex, complex)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'complex_mod_le'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION complex_mod_ge(complex, complex)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'complex_mod_ge'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION complex_mod_gt(complex, complex)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'complex_mod_gt'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
