@@ -256,3 +256,39 @@ CREATE FUNCTION complex_mod_gt(complex, complex)
   AS 'MODULE_PATHNAME', 'complex_mod_gt'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION complex_cmp(complex, complex)
+  RETURNS int
+  AS 'MODULE_PATHNAME', 'complex_cmp'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+
+CREATE OPERATOR = (
+  LEFTARG = complex, RIGHTARG = complex,
+  PROCEDURE = complex_mod_eq,
+  COMMUTATOR = =
+);
+
+CREATE OPERATOR <= (
+  LEFTARG = complex, RIGHTARG = complex,
+  PROCEDURE = complex_mod_le,
+  COMMUTATOR = <=
+);
+
+CREATE OPERATOR < (
+  LEFTARG = complex, RIGHTARG = complex,
+  PROCEDURE = complex_mod_lt,
+  COMMUTATOR = <
+);
+
+
+CREATE OPERATOR > (
+  LEFTARG = complex, RIGHTARG = complex,
+  PROCEDURE = complex_mod_gt,
+  COMMUTATOR = >
+);
+
+CREATE OPERATOR >= (
+  LEFTARG = complex, RIGHTARG = complex,
+  PROCEDURE = complex_mod_ge,
+  COMMUTATOR = >=
+);

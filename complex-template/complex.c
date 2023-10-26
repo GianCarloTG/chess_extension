@@ -512,3 +512,17 @@ complex_mod_gt(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(result);
 }
 
+PG_FUNCTION_INFO_V1(complex_cmp);
+Datum
+complex_cmp(PG_FUNCTION_ARGS)
+{
+  Complex *c = PG_GETARG_COMPLEX_P(0);
+  Complex *d = PG_GETARG_COMPLEX_P(1);
+  int result = 0 ;
+  if (FPgt(complex_modulus(c), complex_modulus(d))) return 1;
+  if (FPlt(complex_modulus(c), complex_modulus(d))) return -1;
+  return result;
+  PG_FREE_IF_COPY(c, 0);
+  PG_FREE_IF_COPY(d, 1);
+  PG_RETURN_BOOL(result);
+}
