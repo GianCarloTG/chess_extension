@@ -73,12 +73,12 @@ CREATE FUNCTION im(complex)
 /* Complete the following code by filling in the dots (...) 
  * This function returns the conjugate of a complex number
  */
-
-CREATE FUNCTION conjugate(complex)
-  RETURNS complex
-  AS 'MODULE_PATHNAME', 'complex_conj'
+/*
+CREATE FUNCTION conjugate(...)
+  RETURNS ...
+  AS 'MODULE_PATHNAME', '...'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
+*/
 
 /******************************************************************************
  * Operators
@@ -230,74 +230,3 @@ CREATE OPERATOR <-> (
 );
 
 /******************************************************************************/
-
-CREATE FUNCTION complex_mod_eq(complex, complex)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'complex_mod_eq'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION complex_mod_lt(complex, complex)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'complex_mod_lt'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION complex_mod_le(complex, complex)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'complex_mod_le'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION complex_mod_ge(complex, complex)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'complex_mod_ge'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION complex_mod_gt(complex, complex)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'complex_mod_gt'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION complex_cmp(complex, complex)
-  RETURNS int
-  AS 'MODULE_PATHNAME', 'complex_cmp'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-
-CREATE OPERATOR = (
-  LEFTARG = complex, RIGHTARG = complex,
-  PROCEDURE = complex_mod_eq,
-  COMMUTATOR = =
-);
-
-CREATE OPERATOR <= (
-  LEFTARG = complex, RIGHTARG = complex,
-  PROCEDURE = complex_mod_le,
-  COMMUTATOR = <=
-);
-
-CREATE OPERATOR < (
-  LEFTARG = complex, RIGHTARG = complex,
-  PROCEDURE = complex_mod_lt,
-  COMMUTATOR = <
-);
-
-
-CREATE OPERATOR > (
-  LEFTARG = complex, RIGHTARG = complex,
-  PROCEDURE = complex_mod_gt,
-  COMMUTATOR = >
-);
-
-CREATE OPERATOR >= (
-  LEFTARG = complex, RIGHTARG = complex,
-  PROCEDURE = complex_mod_ge,
-  COMMUTATOR = >=
-);
-
-CREATE OPERATOR CLASS complex_abs_ops
-    DEFAULT FOR TYPE complex USING btree AS
-        OPERATOR        1       < ,
-        OPERATOR        2       <= ,
-        OPERATOR        3       = ,
-        OPERATOR        4       >= ,
-        OPERATOR        5       > ,
-        FUNCTION        1       complex_cmp(complex, complex);

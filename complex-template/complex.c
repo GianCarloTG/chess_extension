@@ -260,16 +260,17 @@ complex_im(PG_FUNCTION_ARGS)
 /* Complete the following code by filling in the dots (...) 
  * This function returns the conjugate of a complex number
  */
-
+/*
 PG_FUNCTION_INFO_V1(complex_conj);
 Datum
 complex_conj(PG_FUNCTION_ARGS)
 {
   Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *result = complex_make(c->a, -c->b);
+  ...
   PG_FREE_IF_COPY(c, 0);
-  PG_RETURN_COMPLEX_P(result);
+  PG_RETURN_COMPLEX_P(...);
 }
+*/
 
 /*****************************************************************************/
 
@@ -445,84 +446,3 @@ complex_dist(PG_FUNCTION_ARGS)
 }
 
 /*****************************************************************************/
-
-static double complex_modulus(Complex *c){
-  return (c->a *c->a + c->b *c->b);
-}
-
-PG_FUNCTION_INFO_V1(complex_mod_eq);
-Datum
-complex_mod_eq(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  bool result = FPeq(complex_modulus(c), complex_modulus(d));
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
-
-
-PG_FUNCTION_INFO_V1(complex_mod_lt);
-Datum
-complex_mod_lt(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  bool result = FPlt(complex_modulus(c), complex_modulus(d));
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
-
-PG_FUNCTION_INFO_V1(complex_mod_le);
-Datum
-complex_mod_le(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  bool result = FPle(complex_modulus(c), complex_modulus(d));
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
-
-
-PG_FUNCTION_INFO_V1(complex_mod_ge);
-Datum
-complex_mod_ge(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  bool result = FPge(complex_modulus(c), complex_modulus(d));
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
-
-PG_FUNCTION_INFO_V1(complex_mod_gt);
-Datum
-complex_mod_gt(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  bool result = FPgt(complex_modulus(c), complex_modulus(d));
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
-
-PG_FUNCTION_INFO_V1(complex_cmp);
-Datum
-complex_cmp(PG_FUNCTION_ARGS)
-{
-  Complex *c = PG_GETARG_COMPLEX_P(0);
-  Complex *d = PG_GETARG_COMPLEX_P(1);
-  int result = 0 ;
-  if (FPgt(complex_modulus(c), complex_modulus(d))) return 1;
-  if (FPlt(complex_modulus(c), complex_modulus(d))) return -1;
-  return result;
-  PG_FREE_IF_COPY(c, 0);
-  PG_FREE_IF_COPY(d, 1);
-  PG_RETURN_BOOL(result);
-}
