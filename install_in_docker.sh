@@ -1,4 +1,4 @@
 #!/bin/sh
-cd /home/complex-template
+cd /home/chess-template
 make
 make install
