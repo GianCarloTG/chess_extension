@@ -1,37 +1,20 @@
 #include <stdio.h>
 #include <postgres.h>
-#include <float.h>
-#include <math.h>
 #include <stdlib.h>
 
 #include "utils/builtins.h"
+#include "libpq/pqformat.h"
+
 #include "smallchesslib.h"
 
 PG_MODULE_MAGIC;
 
-/**** Chessgame structure, needs to be array to save data *****/
-
-typedef struct Chessgame {
-    char san[8]; // Max Array to store moves
-} Chessgame;
-
 /*****************************************************************************/
 
-#define DatumGetChessgameP(X)  ((Chessgame *) DatumGetPointer(X))
+#define DatumGetChessgameP(X)  ((SCL_Record *) DatumGetPointer(X))
 #define ChessgamePGetDatum(X)  PointerGetDatum(X)
 #define PG_GETARG_CHESSGAME_P(n) DatumGetChessgameP(PG_GETARG_DATUM(n))
 #define PG_RETURN_CHESSGAME_P(x) return ChessgamePGetDatum(x)
-
-/*****************************************************************************/
-
-static SCL_Record *
-chessgame_make(const char *san)
-{
-  SCL_Record *record = palloc0(sizeof(Chessgame));
-  SCL_recordFromPGN(record, san);
-  return record;
-}
-
 
 /*****************************************************************************/
 
@@ -50,7 +33,13 @@ void putCharStr(char c)
 
 /*****************************************************************************/
 
-
+static SCL_Record *
+chessgame_make(const char *string)
+{
+  SCL_Record *record = palloc0(sizeof(SCL_Record));
+  SCL_recordFromPGN(record, string);
+  return record;
+}
 
 static char *
 chessgame_to_str(const SCL_Record *record)
@@ -89,7 +78,7 @@ chessgame_recv(PG_FUNCTION_ARGS)
   SCL_Record *record = (SCL_Record *) palloc(sizeof(SCL_Record));
   record = chessgame_make(pq_getmsgstring(buf));
   PG_RETURN_CHESSGAME_P(record);
-} 
+}
 
 PG_FUNCTION_INFO_V1(chessgame_send);
 Datum
@@ -98,7 +87,8 @@ chessgame_send(PG_FUNCTION_ARGS)
   SCL_Record *record = PG_GETARG_CHESSGAME_P(0);
   StringInfoData buf;
   pq_begintypsend(&buf);
-  pq_sendtext(&buf, record);
+  int len = SCL_recordLength(record);
+  pq_sendtext(&buf, record, len);
   PG_FREE_IF_COPY(record, 0);
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }

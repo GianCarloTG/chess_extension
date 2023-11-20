@@ -12,6 +12,6 @@ docker run --name psql_chess --rm -e POSTGRES_PASSWORD=gian -e POSTGRES_USER=gia
 install complex extension (for testing)
 
 ```
-sh install_complex_library.sh
+sh install_chess_library.sh
 ```
 
