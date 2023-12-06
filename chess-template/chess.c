@@ -9,11 +9,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define ERR_CODE1    400
-#define ERR_CODE2    401
-// #ifndef CHESS_FUNCTIONS_H
-// #define CHESS_FUNCTIONS_H
-
 
 PG_MODULE_MAGIC;
 
@@ -39,22 +34,14 @@ typedef struct {
 
 PG_FUNCTION_INFO_V1(chessgame_in);
 PG_FUNCTION_INFO_V1(chessgame_out);
-PG_FUNCTION_INFO_V1(chessgame_recv);
-PG_FUNCTION_INFO_V1(chessgame_send);
-
 PG_FUNCTION_INFO_V1(chessboard_in);
 PG_FUNCTION_INFO_V1(chessboard_out);
-PG_FUNCTION_INFO_V1(chessboard_recv);
-PG_FUNCTION_INFO_V1(chessboard_send);
-
-
 
 // Function to convert external representation to chessgame type
 Datum chessgame_in(PG_FUNCTION_ARGS) {
     char *str = PG_GETARG_CSTRING(0);
     chessgame *result;
-    char sanitized_moves[128] = ""; // Adjust the size as needed
-    char move[16]; // Adjust the size as needed
+    char sanitized_moves[4096] = ""; // Adjust the size as needed
     int index = 0;
 
     while (*str != '\0') {
@@ -69,7 +56,7 @@ Datum chessgame_in(PG_FUNCTION_ARGS) {
 
     result = (chessgame *) palloc(sizeof(chessgame));
     strncpy(result->san, sanitized_moves, sizeof(result->san));
-    PG_RETURN_CHESSGAME_P(result);
+    PG_RETURN_POINTER(result);
 }
 
 Datum chessgame_out(PG_FUNCTION_ARGS) {
@@ -80,22 +67,9 @@ Datum chessgame_out(PG_FUNCTION_ARGS) {
     PG_RETURN_CSTRING(result);
 }
 
-Datum chessgame_recv(PG_FUNCTION_ARGS) {
-    ereport(ERROR,
-            (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-             errmsg("chessgame_recv not implemented")));
-    PG_RETURN_NULL();
-}
-
-Datum chessgame_send(PG_FUNCTION_ARGS) {
-    ereport(ERROR,
-            (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-             errmsg("chessgame_send not implemented")));
-    PG_RETURN_NULL();
-}
-
 Datum chessboard_in(PG_FUNCTION_ARGS) {
     char *fen_str = PG_GETARG_CSTRING(0);
+
     chessboard *result = (chessboard *) palloc(sizeof(chessboard));
     strncpy(result->fen, fen_str, sizeof(result->fen));
 
@@ -109,38 +83,7 @@ Datum chessboard_out(PG_FUNCTION_ARGS) {
     PG_RETURN_CSTRING(result);
 }
 
-Datum chessboard_recv(PG_FUNCTION_ARGS) {
-    ereport(ERROR,
-            (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-             errmsg("chessboard_recv not implemented")));
-    PG_RETURN_NULL();
-}
-Datum chessboard_send(PG_FUNCTION_ARGS) {
-    ereport(ERROR,
-            (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-             errmsg("chessboard_send not implemented")));
-    PG_RETURN_NULL();
-}
-
-/*___________________________________________________________________________
-* getBoard() */
-
-static void simulateMove(chessboard *board, int moveNumber) {
-    const char* initialFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-    switch (moveNumber) {
-        case 1:
-            snprintf(board->fen, sizeof(board->fen), "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
-            break;
-        case 2:
-
-            snprintf(board->fen, sizeof(board->fen), "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
-            break;
-        default:
-            snprintf(board->fen, sizeof(board->fen), "%s", initialFEN);
-            break;
-    }
-}
+// Chess functions
 
 PG_FUNCTION_INFO_V1(getBoard);
 
@@ -154,28 +97,53 @@ Datum getBoard(PG_FUNCTION_ARGS) {
 
     chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
     int halfMoves = PG_GETARG_INT32(1);
-    chessboard *initialBoard = (chessboard *)palloc(sizeof(chessboard));
-    snprintf(initialBoard->fen, sizeof(initialBoard->fen), "Initial FEN");
+	char *game_str = pstrdup(game->san);
+	
+	SCL_Record chesslib_record;
+	SCL_recordFromPGN(chesslib_record, game_str);
 
-    if (halfMoves <= 0) {
-        PG_RETURN_POINTER(initialBoard);
+	SCL_Board chesslib_board;
+	SCL_boardInit(chesslib_board);
+	if (halfMoves > 0) {
+        SCL_recordApply(chesslib_record, chesslib_board, halfMoves);
     }
+	char board_str[128];
+    SCL_boardToFEN(chesslib_board, board_str);
 
     chessboard *tempBoard = (chessboard *)palloc(sizeof(chessboard));
-    strncpy(tempBoard->fen, initialBoard->fen, sizeof(tempBoard->fen));
-
-    for (int move = 1; move <= halfMoves; move++) {
-        simulateMove(tempBoard, move);
-    }
+    strncpy(tempBoard->fen, board_str, sizeof(tempBoard->fen));
 
     PG_RETURN_POINTER(tempBoard);
 }
 
-/*___________________________________________________________________________
-* getFirstMoves() */
+int cGetFirstMoves(SCL_Record record, int moves) {
+
+    uint16_t l = SCL_recordLength(record);
+
+    if (moves == l) {
+        return 0;
+    }
+    else if (moves == 0) {
+        SCL_recordInit(record);
+    }
+    else {
+        moves = (moves - 1) * 2;
+        record[moves] = (record[moves] & 0x3f) | SCL_RECORD_END;
+    }
+
+    return 0;
+}
+
 PG_FUNCTION_INFO_V1(getFirstMoves);
+
 Datum getFirstMoves(PG_FUNCTION_ARGS) {
-    chessgame *game = PG_GETARG_CHESSGAME_P(0);
+    if (PG_ARGISNULL(0) || PG_ARGISNULL(1)) {
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Invalid arguments for getFirstMoves")));
+        PG_RETURN_NULL();
+    }
+	chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
     int halfMoveCount = PG_GETARG_INT32(1);
 
     if (halfMoveCount < 0) {
@@ -184,34 +152,289 @@ Datum getFirstMoves(PG_FUNCTION_ARGS) {
                  errmsg("Half-move count should be non-negative")));
     }
 
-    chessgame *result = (chessgame *) palloc(sizeof(chessgame));
-    strncpy(result->san, game->san, sizeof(result->san));
+    char *game_str = pstrdup(game->san);
+	SCL_Record chesslib_record;
+	SCL_recordFromPGN(chesslib_record, game_str);
+	
+    cGetFirstMoves(chesslib_record, halfMoveCount);
+	
+	char result_str[4096];
+	SCL_printPGN(chesslib_record, 0, result_str);
+	
+	chessgame *result = (chessgame *) palloc(sizeof(chessgame));
+    strncpy(result->san, result_str, sizeof(result->san));
+	
+    PG_RETURN_POINTER(result);
+}
 
-    char *moves = result->san;
-    int movesIndex = 0;
-    int halfMoves = 0;
-    bool inMove = false;
+int cHasBoard(SCL_Record record, SCL_Board board, int moves) {
 
-    while (*moves && halfMoves < halfMoveCount) {
-        if (*moves == '.') {
-            inMove = false;
-        } else if (!isspace(*moves)) {
-            if (!inMove) {
-                inMove = true;
-                halfMoves++;
-                if (halfMoves >= halfMoveCount) {
-                    movesIndex = 0; // Truncate from this move
-                    break;
-                }
-            }
+    SCL_Board gameboard;
+    SCL_boardInit(gameboard);
+    if (SCL_boardsDiffer(gameboard, board) == 0) {
+        return 1; //TRUE
+    }
+
+    for (int i = 0; i < moves; ++i)
+    {
+        uint8_t s0, s1;
+        char p;
+
+        SCL_recordGetMove(record, i, &s0, &s1, &p);
+        SCL_boardMakeMove(gameboard, s0, s1, p);
+        if (SCL_boardsDiffer(gameboard, board) == 0) {
+            return 1; //TRUE
         }
-        moves++;
-        movesIndex++;
+    }
+    return 0; //FALSE
+}
+
+PG_FUNCTION_INFO_V1(hasBoard);
+
+Datum hasBoard(PG_FUNCTION_ARGS) {
+    if (PG_ARGISNULL(0) || PG_ARGISNULL(1) || PG_ARGISNULL(2)) {
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Invalid arguments for hasBoard")));
+        PG_RETURN_NULL();
     }
 
-    if (movesIndex < strlen(result->san)) {
-        result->san[movesIndex] = '\0'; // Truncate to the desired move
+    chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
+	chessboard *board = (chessboard *)PG_GETARG_POINTER(1);
+    int halfMoves = PG_GETARG_INT32(2);
+
+    char *game_str = pstrdup(game->san);
+    char *board_str = pstrdup(board->fen);
+	
+	SCL_Record chesslib_record;
+	SCL_recordFromPGN(chesslib_record, game_str);
+	
+	SCL_Board chesslib_board;
+	SCL_boardInit(chesslib_board);
+    SCL_boardFromFEN(chesslib_board, board_str);
+	
+    int res;
+	res = cHasBoard(chesslib_record, chesslib_board, halfMoves);
+
+    PG_RETURN_BOOL(res == 1);
+}
+
+int cHasOpening(SCL_Record record, SCL_Record opening) {
+
+    int openingLength = SCL_recordLength(opening);
+    int recordLength = SCL_recordLength(record);
+
+    if (openingLength > recordLength) {
+        return 0; //FALSE
     }
 
-    PG_RETURN_CHESSGAME_P(result);
+    cGetFirstMoves(record, openingLength);
+	
+    for (int i = 0; i < openingLength * 2; i++) {
+        if (record[i] != opening[i]) {
+            return 0; //FALSE
+        }
+    }
+    return 1; //TRUE
+}
+
+PG_FUNCTION_INFO_V1(hasOpening);
+
+Datum hasOpening(PG_FUNCTION_ARGS) {
+    if (PG_ARGISNULL(0) || PG_ARGISNULL(1)) {
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Invalid arguments for hasOpening")));
+        PG_RETURN_NULL();
+    }
+
+    chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
+	chessgame *opening = (chessgame *)PG_GETARG_POINTER(1);
+
+    char *game_str = pstrdup(game->san);
+    char *opening_str = pstrdup(opening->san);
+	
+	SCL_Record chesslib_record;
+	SCL_recordFromPGN(chesslib_record, game_str);
+	
+	SCL_Record chesslib_opening;
+	SCL_recordFromPGN(chesslib_opening, opening_str);
+	
+    int res;
+	res = cHasOpening(chesslib_record, chesslib_opening);
+
+    PG_RETURN_BOOL(res == 1);
+}
+
+/*___________________________________________________________________________
+ ########### B-Tree ###########
+___________________________________________________________________________
+*/
+
+static bool chessgame_eq(chessgame *a, chessgame *b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    int length_a = strlen(a->san);
+    int length_b = strlen(b->san);
+
+    if (length_a != length_b) {
+        return false;
+    }
+    for (int i = 0; i < length_a; i++) {
+        if (a->san[i] != b->san[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+PG_FUNCTION_INFO_V1(chessgame_equal);
+
+Datum chessgame_equal(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+    PG_RETURN_BOOL(chessgame_eq(a, b));
+}
+
+PG_FUNCTION_INFO_V1(chessgame_dif);
+
+Datum chessgame_dif(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+    PG_RETURN_BOOL(!chessgame_eq(a, b));
+}
+
+static bool chessgame_gt(chessgame *a, chessgame *b) {
+    if (a == NULL || b == NULL) {
+        // Handle NULL pointers if necessary
+        return false;
+    }
+
+    int length_a = strlen(a->san);
+    int length_b = strlen(b->san);
+    int min_length = (length_a < length_b) ? length_a : length_b;
+
+    for (int i = 0; i < min_length; i++) {
+        if (a->san[i] > b->san[i]) {
+            return true;
+        } else if (a->san[i] < b->san[i]) {
+            return false;
+        }
+    }
+
+    return (length_a > length_b);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_greater_than);
+
+Datum chessgame_greater_than(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+    PG_RETURN_BOOL(chessgame_gt(a, b));
+}
+
+static bool chessgame_gte(chessgame *a, chessgame *b) {
+    if (a == NULL || b == NULL) {
+        // Handle NULL pointers if necessary
+        return false;
+    }
+
+    int length_a = strlen(a->san);
+    int length_b = strlen(b->san);
+    int min_length = (length_a < length_b) ? length_a : length_b;
+
+    for (int i = 0; i < min_length; i++) {
+        if (a->san[i] > b->san[i]) {
+            return true;
+        } else if (a->san[i] < b->san[i]) {
+            return false;
+        }
+    }
+
+    return (length_a >= length_b);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_greater_than_or_equal);
+
+Datum chessgame_greater_than_or_equal(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+    PG_RETURN_BOOL(chessgame_gte(a, b));
+}
+
+static bool chessgame_lt(chessgame *a, chessgame *b) {
+    if (a == NULL || b == NULL) {
+        // Handle NULL pointers if necessary
+        return false;
+    }
+
+    int length_a = strlen(a->san);
+    int length_b = strlen(b->san);
+    int min_length = (length_a < length_b) ? length_a : length_b;
+
+    for (int i = 0; i < min_length; i++) {
+        if (a->san[i] < b->san[i]) {
+            return true;
+        } else if (a->san[i] > b->san[i]) {
+            return false;
+        }
+    }
+
+    return (length_a < length_b);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_less_than);
+Datum chessgame_less_than(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+
+    PG_RETURN_BOOL(chessgame_lt(a, b));
+}
+// #####
+
+static bool chessgame_lte(chessgame *a, chessgame *b) {
+    if (a == NULL || b == NULL) {
+        // Handle NULL pointers if necessary
+        return false;
+    }
+
+    int length_a = strlen(a->san);
+    int length_b = strlen(b->san);
+    int min_length = (length_a < length_b) ? length_a : length_b;
+
+    for (int i = 0; i < min_length; i++) {
+        if (a->san[i] < b->san[i]) {
+            return true;
+        } else if (a->san[i] > b->san[i]) {
+            return false;
+        }
+    }
+
+    return (length_a <= length_b);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_less_than_or_eq);
+Datum chessgame_less_than_or_eq(PG_FUNCTION_ARGS) {
+    chessgame *a = (chessgame *)PG_GETARG_POINTER(0);
+    chessgame *b = (chessgame *)PG_GETARG_POINTER(1);
+
+    PG_RETURN_BOOL(chessgame_lte(a, b));
+}
+
+PG_FUNCTION_INFO_V1(chess_cmp);
+
+Datum chess_cmp(PG_FUNCTION_ARGS) {
+    text *arg1 = PG_GETARG_TEXT_PP(0);
+    text *arg2 = PG_GETARG_TEXT_PP(1);
+
+    char *str1 = text_to_cstring(arg1);
+    char *str2 = text_to_cstring(arg2);
+
+    int result = strcmp(str1, str2);
+    pfree(str1);
+    pfree(str2);
+
+    PG_RETURN_INT32(result);
 }

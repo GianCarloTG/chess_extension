@@ -659,6 +659,9 @@ int16_t SCL_getAIMove(
 */
 typedef void (*SCL_PutCharFunction)(char);
 
+void putCharStr(char c, char* target);
+
+
 /**
   Prints given chessboard using given format and an abstract printing function.
 */
@@ -679,8 +682,7 @@ void SCL_printBoardSimple(
   uint8_t format);
 
 void SCL_printSquareUTF8(uint8_t square, SCL_PutCharFunction putCharFunc);
-void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
-  SCL_Board initialState);
+void SCL_printPGN(SCL_Record r, SCL_Board initialState, char* str);
 
 /**
   Reads a move from string (the notation format is described at the top of this
@@ -3393,9 +3395,9 @@ uint8_t SCL_boardMoveResetsCount(SCL_Board board,
     board[squareTo] != '.';
 }
 
-void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
-  SCL_Board initialState)
+void SCL_printPGN(SCL_Record r, SCL_Board initialState, char* str)
 {
+  *str = 0;
   if (SCL_recordLength(r) == 0)
     return;
 
@@ -3423,15 +3425,15 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
       uint8_t move = pos / 2 + 1;
 
       if (move / 100 != 0)
-        putCharFunc('0' + move / 100);
+          putCharStr('0' + move / 100, str);
 
       if (move / 10 != 0 || move / 100 != 0)
-        putCharFunc('0' + (move % 100) / 10);
+          putCharStr('0' + (move % 100) / 10, str);
 
-      putCharFunc('0' + move % 10);
+      putCharStr('0' + move % 10, str);
 
-      putCharFunc('.');
-      putCharFunc(' ');
+      putCharStr('.', str);
+      putCharStr(' ', str);
     }
 
 #if !SCL_960_CASTLING
@@ -3442,9 +3444,9 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
         (board[s0] == 'k' && board[s1] == 'r'))
 #endif
     {
-      putCharFunc('O');
-      putCharFunc('-');
-      putCharFunc('O');
+        putCharStr('O', str);
+        putCharStr('-', str);
+        putCharStr('O', str);
 
 #if !SCL_960_CASTLING
       if (s1 == 58 || s1 == 2)
@@ -3453,8 +3455,8 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
           (s1 == 56 + (board[SCL_BOARD_EXTRA_BYTE] & 0x07)))
 #endif
       {
-        putCharFunc('-');
-        putCharFunc('O');
+          putCharStr('-', str);
+          putCharStr('O', str);
       }
     }
     else
@@ -3463,7 +3465,7 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
 
       if (!pawn)
       {
-        putCharFunc(SCL_pieceToColor(board[s0],1));
+          putCharStr(SCL_pieceToColor(board[s0],1), str);
 
         // disambiguation:
 
@@ -3483,28 +3485,28 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
           }
 
         if (specify & 0x01)
-          putCharFunc('a' + s0 % 8);
+            putCharStr('a' + s0 % 8, str);
 
         if (specify & 0x02)
-          putCharFunc('1' + s0 / 8);
+            putCharStr('1' + s0 / 8, str);
       }
 
       if (board[s1] != '.' ||
        (pawn && s0 % 8 != s1 % 8 && board[s1] == '.')) // capture?
       {
         if (pawn)
-          putCharFunc('a' + s0 % 8);
+            putCharStr('a' + s0 % 8, str);
           
-        putCharFunc('x');
+        putCharStr('x', str);
       }
       
-      putCharFunc('a' + s1 % 8);
-      putCharFunc('1' + s1 / 8);
+      putCharStr('a' + s1 % 8, str);
+      putCharStr('1' + s1 / 8, str);
 
       if (pawn && (s1 >= 56 || s1 <= 7)) // promotion?
       {
-        putCharFunc('=');
-        putCharFunc(SCL_pieceToColor(p,1));
+          putCharStr('=', str);
+          putCharStr(SCL_pieceToColor(p,1), str);
       }
     }
 
@@ -3513,20 +3515,20 @@ void SCL_printPGN(SCL_Record r, SCL_PutCharFunction putCharFunc,
     uint8_t position = SCL_boardGetPosition(board);
  
     if (position == SCL_POSITION_CHECK)
-      putCharFunc('+');
+        putCharStr('+', str);
 
     if (position == SCL_POSITION_MATE)
     {
-      putCharFunc('#');
+        putCharStr('#', str);
       break;
     }
     else if (state != SCL_RECORD_CONT)
     {
-      putCharFunc('*');
+        putCharStr('*', str);
       break;
     }
       
-    putCharFunc(' ');
+    putCharStr(' ', str);
   }
 }
 
@@ -3690,6 +3692,17 @@ uint8_t SCL_boardMoveIsLegal(SCL_Board board, uint8_t squareFrom,
   SCL_boardGetMoves(board,squareFrom,moves);
 
   return SCL_squareSetContains(moves,squareTo);
+}
+
+void putCharStr(char c, char* target)
+{
+    char* s = target;
+
+    while (*s != 0)
+        s++;
+
+    *s = c;
+    *(s + 1) = 0;
 }
 
 #endif // guard
