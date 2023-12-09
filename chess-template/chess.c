@@ -13,11 +13,11 @@
 PG_MODULE_MAGIC;
 
 typedef struct {
-    char fen[128]; // FEN representation of chessboard
+    char fen[128]; 
 } chessboard;
 
 typedef struct {
-    char san[4096]; // SAN representation of chess game
+    char san[4096];
 } chessgame;
 
 #define DatumGetChessgameP(X)  ((chessgame *) DatumGetPointer(X))
