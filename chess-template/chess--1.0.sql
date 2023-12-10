@@ -143,3 +143,55 @@ CREATE OPERATOR CLASS btree_has_opening
         OPERATOR        4       >= ,
         OPERATOR        5       > ,
         FUNCTION        1       chess_cmp(chessgame, chessgame);
+
+
+/******************************************************************************
+ * GIN
+ ******************************************************************************/
+ 
+CREATE OR REPLACE FUNCTION hasBoardGeneral(game chessgame, board chessboard)
+RETURNS boolean
+AS 'MODULE_PATHNAME', 'hasBoardGeneral'
+LANGUAGE C STRICT;
+ 
+CREATE OPERATOR ? (
+    PROCEDURE = hasBoardGeneral,
+    LEFTARG = chessgame,
+    RIGHTARG = chessboard,
+    COMMUTATOR = '?'
+);
+ 
+CREATE FUNCTION chessgame_extract_value(chessgame, internal)
+RETURNS internal
+AS 'MODULE_PATHNAME'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_extract_query(chessboard, internal, int2, internal, internal)
+RETURNS internal
+AS 'MODULE_PATHNAME'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_consistent(internal, int2, chessgame, int4, internal, internal)
+RETURNS boolean
+AS 'MODULE_PATHNAME'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_compare_entry(chessboard, chessboard)
+RETURNS int
+AS 'MODULE_PATHNAME'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OPERATOR CLASS gin_has_board
+DEFAULT FOR TYPE chessgame USING gin
+AS
+	OPERATOR 		1		? (chessgame, chessboard),
+	FUNCTION        1       chessgame_compare_entry(chessboard, chessboard),
+	FUNCTION        2       chessgame_extract_value(chessgame, internal),
+	FUNCTION        3       chessgame_extract_query(chessboard, internal, int2, internal, internal),
+	FUNCTION        4       chessgame_consistent(internal, int2, chessgame, int4, internal, internal),
+	STORAGE         chessboard;
+	
+
+CREATE FUNCTION hasBoardWithGIN(game chessgame, board chessboard, n integer) RETURNS boolean
+AS $$ SELECT getFirstMoves($1, $3) ? $2; $$
+LANGUAGE SQL IMMUTABLE;

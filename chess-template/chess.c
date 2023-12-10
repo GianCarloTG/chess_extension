@@ -9,15 +9,17 @@
 #include <stdbool.h>
 #include <string.h>
 
+#define ChessgameExistsStrategyNumber	1
+typedef uint16 StrategyNumber;
 
 PG_MODULE_MAGIC;
 
 typedef struct {
-    char fen[128]; 
+    char fen[128]; // FEN representation of chessboard
 } chessboard;
 
 typedef struct {
-    char san[4096];
+    char san[4096]; // SAN representation of chess game
 } chessgame;
 
 #define DatumGetChessgameP(X)  ((chessgame *) DatumGetPointer(X))
@@ -437,4 +439,137 @@ Datum chess_cmp(PG_FUNCTION_ARGS) {
     pfree(str2);
 
     PG_RETURN_INT32(result);
+}
+
+// GIN
+
+PG_FUNCTION_INFO_V1(chessgame_extract_value);
+
+Datum chessgame_extract_value(PG_FUNCTION_ARGS) {
+	chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
+	int32 *nentries = (int32 *) PG_GETARG_POINTER(1);
+	
+	Datum *entries; // return value
+	
+	// nentries <- number of chessboards
+	// entries <- array of chessboards
+	SCL_Record record;
+	SCL_recordFromPGN(record, game->san);
+	int count = SCL_recordLength(record);
+	*nentries = count + 1;
+	
+	entries = (Datum *) palloc(sizeof(Datum) * (count + 1));
+	
+	SCL_Board gameboard;
+	SCL_boardInit(gameboard);
+	char fen_str[128];
+    SCL_boardToFEN(gameboard, fen_str);
+	
+	chessboard *result = (chessboard *) palloc(sizeof(chessboard));
+    strncpy(result->fen, fen_str, sizeof(result->fen));
+	
+	entries[0] = PointerGetDatum(result);
+	
+	for (int i = 0; i < count; ++i)
+	{
+		uint8_t s0, s1;
+        char p;
+
+        SCL_recordGetMove(record, i, &s0, &s1, &p);
+        SCL_boardMakeMove(gameboard, s0, s1, p);
+		SCL_boardToFEN(gameboard, fen_str);
+		
+		strncpy(result->fen, fen_str, sizeof(result->fen));
+		
+		entries[i + 1] = PointerGetDatum(result);
+	}
+	PG_RETURN_POINTER(entries);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_extract_query);
+
+Datum chessgame_extract_query(PG_FUNCTION_ARGS) {
+	int32			*nentries = (int32 *) PG_GETARG_POINTER(1);
+	StrategyNumber	strategy = PG_GETARG_UINT16(2);
+	int32			*searchMode = (int32 *) PG_GETARG_POINTER(6);
+	Datum			*entries;
+	if (strategy == ChessgameExistsStrategyNumber){
+		// argument is chessboard, operation chessgame ? chessboard
+		chessboard	*b = (chessboard *) PG_GETARG_POINTER(0);
+		chessboard	*item = (chessboard *) palloc(sizeof(chessboard));
+
+		*nentries = 1;
+		entries = (Datum *) palloc(sizeof(Datum));
+		strncpy(item->fen, b->fen, sizeof(item->fen));
+		entries[0] = PointerGetDatum(item);
+	}
+	PG_RETURN_POINTER(entries);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_compare_entry);
+
+Datum chessgame_compare_entry(PG_FUNCTION_ARGS) {
+	// compare two chessboards
+    chessboard	*arg1 = (chessboard *) PG_GETARG_POINTER(0);
+    chessboard  *arg2 = (chessboard *) PG_GETARG_POINTER(1);
+    int32       result;
+	
+	SCL_Board gameboard;
+	SCL_boardInit(gameboard);
+    SCL_boardFromFEN(gameboard, arg1->fen);
+	
+	SCL_Board board;
+	SCL_boardInit(board);
+    SCL_boardFromFEN(board, arg2->fen);
+	
+    result = SCL_boardsDiffer(gameboard, board);	// 0 if equal, 1 if not
+  
+    PG_FREE_IF_COPY(arg1, 0);
+    PG_FREE_IF_COPY(arg2, 1);
+
+    PG_RETURN_INT32(result);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_consistent);
+
+Datum chessgame_consistent(PG_FUNCTION_ARGS) {
+	bool	*check = (bool *) PG_GETARG_POINTER(0);
+	StrategyNumber strategy = PG_GETARG_UINT16(1);
+	bool res;
+	if ( strategy == ChessgameExistsStrategyNumber ) {
+		// chessgame ? chessboard operation
+		res = check[0] == true;
+	}
+	PG_RETURN_BOOL(res);
+} 
+
+
+PG_FUNCTION_INFO_V1(hasBoardGeneral);
+
+Datum hasBoardGeneral(PG_FUNCTION_ARGS) {
+    if (PG_ARGISNULL(0) || PG_ARGISNULL(1)) {
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Invalid arguments for hasBoard")));
+        PG_RETURN_NULL();
+    }
+
+    chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
+	chessboard *board = (chessboard *)PG_GETARG_POINTER(1);
+
+    char *game_str = pstrdup(game->san);
+    char *board_str = pstrdup(board->fen);
+	
+	SCL_Record chesslib_record;
+	SCL_recordFromPGN(chesslib_record, game_str);
+	
+	SCL_Board chesslib_board;
+	SCL_boardInit(chesslib_board);
+    SCL_boardFromFEN(chesslib_board, board_str);
+	
+	int halfMoves = SCL_recordLength(chesslib_record);
+    int res;
+	res = cHasBoard(chesslib_record, chesslib_board, halfMoves);
+
+    PG_RETURN_BOOL(res == 1);
 }

@@ -31,13 +31,19 @@ WHERE hasboard(game_data,
 
 -- CHECK INDEX -- 
 
--- CREATE INDEX idx_has_opening_btree on chess_games(game_data) using btree_has_opening;
--- CREATE INDEX idx_has_opening_btree ON chess_games USING btree(game_data);
--- CREATE INDEX idx_chessgame ON chess_games USING btree (game_data btree_has_opening);
 CREATE INDEX idx_chessgame ON chess_games USING btree (game_data btree_has_opening);
-SET ENABLE_SEQSCAN TO OFF;
+CREATE INDEX idx_has_board on chess_games using gin(game_data gin_has_board);
 
+SET ENABLE_SEQSCAN TO OFF;
+-- B TREE --
 EXPLAIN ANALYZE 
 SELECT count(*)
 FROM chess_games
 WHERE hasopening(game_data, '1. Nf3 Nf6 2. c4 g6 3. Nc3 Bg7 ');
+
+-- GIN --
+EXPLAIN ANALYZE 
+SELECT count(*) hasboard
+FROM chess_games
+WHERE game_data ? 
+'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
