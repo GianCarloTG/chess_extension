@@ -193,5 +193,6 @@ AS
 	
 
 CREATE FUNCTION hasBoardWithGIN(game chessgame, board chessboard, n integer) RETURNS boolean
-AS $$ SELECT getFirstMoves($1, $3) ? $2; $$
-LANGUAGE SQL IMMUTABLE;
+AS $$ SELECT $1 ? $2 and getFirstMoves($1, $3) ? $2; $$
+LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+

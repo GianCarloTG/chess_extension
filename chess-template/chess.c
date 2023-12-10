@@ -96,14 +96,11 @@ Datum getBoard(PG_FUNCTION_ARGS) {
                  errmsg("Invalid arguments for getBoard")));
         PG_RETURN_NULL();
     }
-
     chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
     int halfMoves = PG_GETARG_INT32(1);
 	char *game_str = pstrdup(game->san);
-	
 	SCL_Record chesslib_record;
 	SCL_recordFromPGN(chesslib_record, game_str);
-
 	SCL_Board chesslib_board;
 	SCL_boardInit(chesslib_board);
 	if (halfMoves > 0) {
@@ -111,10 +108,8 @@ Datum getBoard(PG_FUNCTION_ARGS) {
     }
 	char board_str[128];
     SCL_boardToFEN(chesslib_board, board_str);
-
     chessboard *tempBoard = (chessboard *)palloc(sizeof(chessboard));
     strncpy(tempBoard->fen, board_str, sizeof(tempBoard->fen));
-
     PG_RETURN_POINTER(tempBoard);
 }
 
@@ -153,19 +148,14 @@ Datum getFirstMoves(PG_FUNCTION_ARGS) {
                 (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
                  errmsg("Half-move count should be non-negative")));
     }
-
     char *game_str = pstrdup(game->san);
 	SCL_Record chesslib_record;
 	SCL_recordFromPGN(chesslib_record, game_str);
-	
     cGetFirstMoves(chesslib_record, halfMoveCount);
-	
 	char result_str[4096];
 	SCL_printPGN(chesslib_record, 0, result_str);
-	
 	chessgame *result = (chessgame *) palloc(sizeof(chessgame));
     strncpy(result->san, result_str, sizeof(result->san));
-	
     PG_RETURN_POINTER(result);
 }
 
@@ -200,24 +190,18 @@ Datum hasBoard(PG_FUNCTION_ARGS) {
                  errmsg("Invalid arguments for hasBoard")));
         PG_RETURN_NULL();
     }
-
     chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
 	chessboard *board = (chessboard *)PG_GETARG_POINTER(1);
     int halfMoves = PG_GETARG_INT32(2);
-
     char *game_str = pstrdup(game->san);
     char *board_str = pstrdup(board->fen);
-	
 	SCL_Record chesslib_record;
 	SCL_recordFromPGN(chesslib_record, game_str);
-	
 	SCL_Board chesslib_board;
 	SCL_boardInit(chesslib_board);
     SCL_boardFromFEN(chesslib_board, board_str);
-	
     int res;
 	res = cHasBoard(chesslib_record, chesslib_board, halfMoves);
-
     PG_RETURN_BOOL(res == 1);
 }
 
@@ -249,22 +233,16 @@ Datum hasOpening(PG_FUNCTION_ARGS) {
                  errmsg("Invalid arguments for hasOpening")));
         PG_RETURN_NULL();
     }
-
     chessgame *game = (chessgame *)PG_GETARG_POINTER(0);
 	chessgame *opening = (chessgame *)PG_GETARG_POINTER(1);
-
     char *game_str = pstrdup(game->san);
     char *opening_str = pstrdup(opening->san);
-	
 	SCL_Record chesslib_record;
 	SCL_recordFromPGN(chesslib_record, game_str);
-	
 	SCL_Record chesslib_opening;
 	SCL_recordFromPGN(chesslib_opening, opening_str);
-	
     int res;
 	res = cHasOpening(chesslib_record, chesslib_opening);
-
     PG_RETURN_BOOL(res == 1);
 }
 
