@@ -15,11 +15,11 @@ typedef uint16 StrategyNumber;
 PG_MODULE_MAGIC;
 
 typedef struct {
-    char fen[128]; // FEN representation of chessboard
+    char fen[128]; 
 } chessboard;
 
 typedef struct {
-    char san[4096]; // SAN representation of chess game
+    char san[1024]; 
 } chessgame;
 
 #define DatumGetChessgameP(X)  ((chessgame *) DatumGetPointer(X))
@@ -43,7 +43,7 @@ PG_FUNCTION_INFO_V1(chessboard_out);
 Datum chessgame_in(PG_FUNCTION_ARGS) {
     char *str = PG_GETARG_CSTRING(0);
     chessgame *result;
-    char sanitized_moves[4096] = ""; // Adjust the size as needed
+    char sanitized_moves[4096] = ""; 
     int index = 0;
 
     while (*str != '\0') {
@@ -221,7 +221,7 @@ int cHasOpening(SCL_Record record, SCL_Record opening) {
             return 0; //FALSE
         }
     }
-    return 1; //TRUE
+    return 1; 
 }
 
 PG_FUNCTION_INFO_V1(hasOpening);
@@ -288,7 +288,6 @@ Datum chessgame_dif(PG_FUNCTION_ARGS) {
 
 static bool chessgame_gt(chessgame *a, chessgame *b) {
     if (a == NULL || b == NULL) {
-        // Handle NULL pointers if necessary
         return false;
     }
 
@@ -303,7 +302,6 @@ static bool chessgame_gt(chessgame *a, chessgame *b) {
             return false;
         }
     }
-
     return (length_a > length_b);
 }
 
@@ -317,7 +315,6 @@ Datum chessgame_greater_than(PG_FUNCTION_ARGS) {
 
 static bool chessgame_gte(chessgame *a, chessgame *b) {
     if (a == NULL || b == NULL) {
-        // Handle NULL pointers if necessary
         return false;
     }
 
@@ -346,7 +343,6 @@ Datum chessgame_greater_than_or_equal(PG_FUNCTION_ARGS) {
 
 static bool chessgame_lt(chessgame *a, chessgame *b) {
     if (a == NULL || b == NULL) {
-        // Handle NULL pointers if necessary
         return false;
     }
 
@@ -372,11 +368,9 @@ Datum chessgame_less_than(PG_FUNCTION_ARGS) {
 
     PG_RETURN_BOOL(chessgame_lt(a, b));
 }
-// #####
 
 static bool chessgame_lte(chessgame *a, chessgame *b) {
     if (a == NULL || b == NULL) {
-        // Handle NULL pointers if necessary
         return false;
     }
 
@@ -419,7 +413,10 @@ Datum chess_cmp(PG_FUNCTION_ARGS) {
     PG_RETURN_INT32(result);
 }
 
-// GIN
+/*___________________________________________________________________________
+ ########### GIN ###########
+___________________________________________________________________________
+*/
 
 PG_FUNCTION_INFO_V1(chessgame_extract_value);
 

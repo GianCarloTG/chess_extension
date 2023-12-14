@@ -19,12 +19,12 @@ CREATE OR REPLACE FUNCTION chessboard_out(chessboard)
     LANGUAGE C STRICT;
 
 CREATE TYPE chessgame (
-    internallength = 850,
+    internallength = 1024,
     input = chessgame_in,
     output = chessgame_out);
 
 CREATE TYPE chessboard (
-    internallength = 850,
+    internallength = 512,
     input = chessboard_in,
     output = chessboard_out);
 
